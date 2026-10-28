@@ -77,6 +77,38 @@ def process_application(app: dict, messenger: Messenger | None = None, watchlist
         broker_lines.append(f"Refinance analysis: {refi['recommendation']}")
 
     first = borrower['name'].split()[0]
+
+    # Renewal files use a WhatsApp template message (business-initiated, bypasses 24-hour window).
+    # The template "mortgage_renewal_reminder" must be pre-approved in Meta Business Manager.
+    # For purchase/FTHB we send a session reply (borrower messaged us first, within the 24-hr window).
+    if kind == "RENEWAL" and borrower.get("phone") and pen_d:
+        # Try to send a structured WhatsApp template first, fall back to the standard text chain.
+        components = [
+            {"type": "body", "parameters": [
+                {"type": "text", "text": first},
+                {"type": "text", "text": f"${pen_d['penalty']:,.0f}"},
+                {"type": "text", "text": portal},
+            ]}
+        ]
+        try:
+            wa_req = messenger.build_whatsapp_template(
+                to=borrower["phone"],
+                template_name="mortgage_renewal_reminder",
+                lang_code="en_US",
+                components=components,
+            )
+            if messenger.live:
+                messenger._client("socialmessaging").send_whatsapp_message(**wa_req)
+            else:
+                import uuid as _uuid
+                messenger.outbox.mkdir(parents=True, exist_ok=True)
+                rec = {"id": str(_uuid.uuid4()), "channel": "whatsapp_template", "mode": "dry-run",
+                       "template": "mortgage_renewal_reminder", "request": {**wa_req, "message": wa_req["message"].decode()}}
+                (messenger.outbox / f"whatsapp-template-{rec['id'][:8]}.json").write_text(__import__('json').dumps(rec, indent=2))
+            out["whatsapp_template_sent"] = {"template": "mortgage_renewal_reminder", "status": "queued"}
+        except Exception as e:
+            out["whatsapp_template_sent"] = {"template": "mortgage_renewal_reminder", "status": "error", "detail": str(e)}
+
     body = (f"Hi {first}, thanks for your mortgage inquiry. A licensed mortgage broker is reviewing your file and will contact you to discuss options.")
     if hv:
         body += (f" For context, an indicative value for your property is about ${hv['estimate']:,.0f} (range ${hv['low']:,.0f} to ${hv['high']:,.0f}). "

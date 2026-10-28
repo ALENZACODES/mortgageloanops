@@ -143,3 +143,50 @@ def test_build_whatsapp_template_shape():
     assert msg["template"]["language"]["code"] == "en_US"
     assert len(msg["template"]["components"]) == 1
     assert req["originationPhoneNumberId"] == "phone-number-id-abc"
+
+
+def test_whatsapp_template_renewal_pipeline(tmp_path):
+    """Renewal pipeline auto-sends a WhatsApp template for business-initiated outbound."""
+    from mortgageloanops.pipeline import process_application
+    from mortgageloanops.messaging import Messenger
+    import json
+    m = Messenger(live=False, outbox_dir=str(tmp_path), config={
+        "sms_origination": "+15551230000",
+        "whatsapp_phone_number_id": "phone-number-id-abc",
+        "meta_api_version": "v20.0",
+        "email_from": "ops@example.com",
+    })
+    app = {
+        "type": "RENEWAL",
+        "borrower": {"name": "Test Borrower", "phone": "+16135550100", "email": "t@example.com"},
+        "province": "ON",
+        "credit_score": 720,
+        "balance": 350000,
+        "contract_rate": 5.25,
+        "months_remaining": 24,
+        "is_variable": False,
+        "current_posted_rate": 7.19,
+        "original_posted_rate": 5.39,
+        "comparison_rate": 4.79,
+        "new_rate": 4.50,
+        "amort_years_remaining": 18,
+    }
+    result = process_application(app, messenger=m)
+    # WhatsApp template was queued
+    assert result.get("whatsapp_template_sent", {}).get("status") == "queued"
+    assert result["whatsapp_template_sent"]["template"] == "mortgage_renewal_reminder"
+    # Outbox contains a WhatsApp template file
+    template_files = list(tmp_path.glob("whatsapp-template-*.json"))
+    assert len(template_files) == 1
+    payload = json.loads(template_files[0].read_text())
+    msg = json.loads(payload["request"]["message"])
+    assert msg["type"] == "template"
+    assert msg["template"]["name"] == "mortgage_renewal_reminder"
+    assert msg["template"]["language"]["code"] == "en_US"
+    # Body parameters include borrower first name, penalty amount, portal URL
+    body_component = msg["template"]["components"][0]
+    assert body_component["type"] == "body"
+    params = [p["text"] for p in body_component["parameters"]]
+    assert "Test" in params[0]   # first name
+    assert "$" in params[1]       # penalty formatted as currency
+    assert "portal" in params[2]  # portal URL

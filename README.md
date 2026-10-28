@@ -1,8 +1,8 @@
 # MortgageLoanOps
 
 > **AWS CDS Agentic AI Partner Hackathon — Oct 2026**
-> 6 AWS services · 78 tests · runs dry-run with zero AWS credentials
-> [`python scripts/agentcore_demo.py`](scripts/agentcore_demo.py) — full agentic loop in ~2 s · [Judging notes](docs/JUDGING_NOTES.md)
+> 6 AWS services · 79 tests · runs dry-run with zero AWS credentials
+> [`python scripts/agentcore_demo.py`](scripts/agentcore_demo.py) — full agentic loop in ~2 s · [Judging notes](docs/JUDGING_NOTES.md) · [WhatsApp prize](docs/WHATSAPP_PRIZE.md)
 
 Canadian mortgage operations on AWS in one small, dependency-free Python app. It combines three tools:
 
@@ -25,7 +25,7 @@ git clone https://github.com/ALENZACODES/mortgageloanops && cd mortgageloanops
 python -m mortgageloanops demo        # runs 3 sample files, writes the would-be AWS requests to ./outbox
 python -m mortgageloanops serve 8000  # web UI at http://localhost:8000
 python scripts/agentcore_demo.py      # AgentCore end-to-end broker Q&A (dry-run, no AWS account needed)
-pip install pytest && pytest -q       # 78 tests incl. a 10,000-case property test
+pip install pytest && pytest -q       # 79 tests incl. a 10,000-case property test
 ```
 
 Requires Python 3.10+. No third-party packages are needed for dry-run mode.
