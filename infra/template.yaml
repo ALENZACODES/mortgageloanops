@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: MortgageLoanOps API + inbound two-way messaging handler (SAM)
+Parameters:
+  SmsOrigination: {Type: String, Description: Origination number or pool ID (End User Messaging SMS)}
+  WhatsAppPhoneNumberId: {Type: String, Default: "", Description: phone-number-id-... from End User Messaging Social}
+  EmailFrom: {Type: String, Description: Verified SES sender}
+  BedrockModelId: {Type: String, Default: "", Description: Optional Bedrock model ID for the Q&A agent}
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 30
+    MemorySize: 256
+    Environment:
+      Variables:
+        MLO_LIVE: "1"
+        MLO_SMS_ORIGINATION: !Ref SmsOrigination
+        MLO_WHATSAPP_PHONE_NUMBER_ID: !Ref WhatsAppPhoneNumberId
+        MLO_EMAIL_FROM: !Ref EmailFrom
+        MLO_BEDROCK_MODEL_ID: !Ref BedrockModelId
+Resources:
+  InboundTopic:
+    Type: AWS::SNS::Topic
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../
+      Handler: mortgageloanops.lambda_handler.api_handler
+      Policies:
+        - Statement:
+            - {Effect: Allow, Action: ['ses:SendEmail', 'sms-voice:SendTextMessage', 'social-messaging:SendWhatsAppMessage'], Resource: '*'}
+      Events:
+        Process: {Type: HttpApi, Properties: {Path: /process, Method: POST}}
+        Health: {Type: HttpApi, Properties: {Path: /health, Method: GET}}
+  InboundFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../
+      Handler: mortgageloanops.lambda_handler.inbound_handler
+      Policies:
+        - Statement:
+            - {Effect: Allow, Action: ['ses:SendEmail', 'sms-voice:SendTextMessage', 'social-messaging:SendWhatsAppMessage', 'bedrock:InvokeModel'], Resource: '*'}
+      Events:
+        FromSns: {Type: SNS, Properties: {Topic: !Ref InboundTopic}}
+Outputs:
+  ApiUrl: {Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com'}
+  InboundTopicArn: {Value: !Ref InboundTopic, Description: Set as the two-way messaging destination for your SMS number / WhatsApp number}

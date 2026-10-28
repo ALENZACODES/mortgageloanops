@@ -8,6 +8,8 @@ Canadian mortgage operations on AWS in one small, dependency-free Python app. It
 | **IRD** (`ird`) | Prepayment penalty (3 months' interest vs. interest-rate differential, comparison-rate and posted-rate methods) and a break-even refinance analysis |
 | **Benchmark** (`homevalue`, `index_anchors`) | Indicative home value by indexing a purchase price with regional benchmark curves, ported from the Benchmark Home Value project |
 
+**Also included:** a Bedrock Q&A agent that must call the real calculators for every number (`agent.py`, Amazon Bedrock Converse tool use; not the AgentCore runtime), two-way messaging that handles inbound SMS/WhatsApp replies with STOP/START/HELP/BROKER handling (`conversation.py`), and Lambda handlers plus a SAM template (`lambda_handler.py`, `infra/template.yaml`).
+
 Borrower messages go out through **AWS End User Messaging SMS**, **AWS End User Messaging Social (WhatsApp)** and **Amazon SES**, with a 5-second per-channel timeout and a secure-portal fallback. Every message passes a guardrail first: no rate quotes, no approval promises, no guarantees.
 
 > Status: working prototype. Everything below marked "tested" is covered by the test suite. Live AWS sending is implemented against the documented API shapes and tested with fake clients; it has not been run against a real AWS account in this repository's CI. See [Limitations](#limitations).
@@ -18,7 +20,7 @@ Borrower messages go out through **AWS End User Messaging SMS**, **AWS End User 
 git clone https://github.com/ALENZACODES/mortgageloanops && cd mortgageloanops
 python -m mortgageloanops demo        # runs 3 sample files, writes the would-be AWS requests to ./outbox
 python -m mortgageloanops serve 8000  # web UI at http://localhost:8000
-pip install pytest && pytest -q       # 35 tests incl. a 10,000-case property test
+pip install pytest && pytest -q       # 46 tests incl. a 10,000-case property test
 ```
 
 Requires Python 3.10+. No third-party packages are needed for dry-run mode.
@@ -36,6 +38,14 @@ python -m mortgageloanops serve 8000
 
 See [docs/AWS_SETUP.md](docs/AWS_SETUP.md) and [infra/iam-policy.json](infra/iam-policy.json).
 
+## Deploy and prove it live
+
+```bash
+sam build && sam deploy --guided      # uses infra/template.yaml (Lambda + HTTP API + SNS topic)
+MLO_LIVE=1 python scripts/live_smoke.py +1YOURMOBILE you@example.com   # one real SMS, WhatsApp and SES message
+```
+Point your SMS number's / WhatsApp number's two-way destination at the SNS topic output to enable inbound replies.
+
 ## How a file flows
 
 `intake → screening (honest: NOT_SCREENED without a list) → B-20 qualification → lender match → IRD/refinance (renewals) → home value → guardrail → SMS → WhatsApp → email → portal → broker handoff + audit trail`
@@ -49,7 +59,7 @@ Architecture diagram: [docs/architecture.svg](docs/architecture.svg) · details:
 - **Screening** ships no sanctions/PEP data and never reports a person as "clear". Connect a licensed provider for production.
 - **Home value** is a regional-index estimate (indicative anchors), not an appraisal or the full AVM. The AVM lives in the Benchmark Home Value project; its reported held-out accuracy is documented there.
 - **Tests** are unit tests and randomized invariant tests (10,000 cases each), not a backtest against real lending outcomes.
-- **Live AWS** paths are verified with fake clients that assert the exact request shapes; real delivery needs your AWS account, verified identities and registered numbers.
+- **Live AWS** paths (SMS, WhatsApp, SES, Bedrock Converse, SNS inbound parsing, SAM template) are verified with fake clients that assert request shapes and logic. They have **not** been run against a real AWS account from this repository yet; inbound event shapes should be confirmed against your own SNS payloads. Run `scripts/live_smoke.py` and `sam deploy` to prove them.
 
 ## License
 
