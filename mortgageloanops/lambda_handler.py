@@ -14,6 +14,29 @@ from .messaging import Messenger
 from .pipeline import process_application
 from . import lenders, __version__
 
+import time as _time
+
+
+def _emit(namespace: str, metric: str, value: float, unit: str = "Count", dims: dict | None = None) -> None:
+    """Emit a CloudWatch custom metric (best-effort; never raises)."""
+    import os as _os
+    if not _os.environ.get("MLO_LIVE"):
+        return
+    try:
+        import boto3 as _boto3
+        cw = _boto3.client("cloudwatch", region_name=_os.environ.get("AWS_REGION", "ca-central-1"))
+        cw.put_metric_data(
+            Namespace=namespace,
+            MetricData=[{
+                "MetricName": metric,
+                "Value": value,
+                "Unit": unit,
+                "Dimensions": [{"Name": k, "Value": v} for k, v in (dims or {}).items()],
+            }],
+        )
+    except Exception:  # pylint: disable=broad-except
+        pass  # metrics are non-critical
+
 _messenger = None
 
 
@@ -35,8 +58,17 @@ def api_handler(event, context=None):
         return _resp(200, {"ok": True, "version": __version__, "lenders_in_registry": lenders.registry_count(), "mode": "live" if _m().live else "dry-run"})
     if method == "POST" and path.endswith("/process"):
         try:
-            return _resp(200, process_application(json.loads(event.get("body") or "{}"), _m()))
+            t0 = _time.monotonic()
+            body_parsed = json.loads(event.get("body") or "{}")
+            result = process_application(body_parsed, _m())
+            elapsed_ms = (_time.monotonic() - t0) * 1000
+            _emit("MortgageLoanOps", "FileProcessed", 1, dims={"Kind": body_parsed.get("kind", "UNKNOWN")})
+            _emit("MortgageLoanOps", "ProcessLatencyMs", elapsed_ms, unit="Milliseconds")
+            if result.get("qualify", {}).get("pass"):
+                _emit("MortgageLoanOps", "QualifyPass", 1)
+            return _resp(200, result)
         except (KeyError, ValueError, TypeError) as e:
+            _emit("MortgageLoanOps", "ProcessError", 1)
             return _resp(400, {"error": f"{type(e).__name__}: {e}"})
     return _resp(404, {"error": "not found"})
 
@@ -48,4 +80,10 @@ def inbound_handler(event, context=None):
         agent = Agent()
     conv = Conversation(_m(), Store("/tmp/state.json"), agent=agent, portal_url=os.environ.get("MLO_PORTAL_URL", "https://portal.example.com"))
     results = [conv.handle(i) for i in normalize_inbound(event)]
+    for r in results:
+        channel = r.get("channel", "unknown")
+        _emit("MortgageLoanOps", "InboundMessage", 1, dims={"Channel": channel})
+        action = r.get("action", "")
+        if action:
+            _emit("MortgageLoanOps", "ConversationAction", 1, dims={"Action": action})
     return {"handled": len(results), "results": results}

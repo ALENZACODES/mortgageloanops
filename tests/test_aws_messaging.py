@@ -126,3 +126,20 @@ def test_dry_run_rcs_writes_outbox(tmp_path):
     m = Messenger(live=False, outbox_dir=str(tmp_path), config=RCS_CFG)
     r = m.send_with_fallback(CONTACT, "s", "hello", "https://p")
     assert r["delivered_via"] == "rcs" and len(list(tmp_path.glob("rcs-*.json"))) == 1
+
+
+def test_build_whatsapp_template_shape():
+    m, _ = mk()
+    req = m.build_whatsapp_template(
+        to="+14165550100",
+        template_name="mortgage_qualification_result",
+        lang_code="en_US",
+        components=[{"type": "body", "parameters": [{"type": "text", "text": "John"}]}],
+    )
+    import json as _json
+    msg = _json.loads(req["message"])
+    assert msg["type"] == "template"
+    assert msg["template"]["name"] == "mortgage_qualification_result"
+    assert msg["template"]["language"]["code"] == "en_US"
+    assert len(msg["template"]["components"]) == 1
+    assert req["originationPhoneNumberId"] == "phone-number-id-abc"

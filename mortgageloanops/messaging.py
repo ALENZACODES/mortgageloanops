@@ -68,6 +68,37 @@ class Messenger:
         return {"originationPhoneNumberId": self.config["whatsapp_phone_number_id"],
                 "metaApiVersion": self.config["meta_api_version"], "message": json.dumps(msg).encode("utf-8")}
 
+    def build_whatsapp_template(self, to: str, template_name: str, lang_code: str = "en_US",
+                                 components: list | None = None) -> dict:
+        """Build an approved WhatsApp template message (preferred for outbound business-initiated messages).
+
+        AWS End User Messaging Social (EUM) passes this to the Meta Cloud API.
+        Template messages bypass the 24-hour messaging window restriction.
+        The template must be pre-approved in the Meta Business Manager.
+
+        Args:
+            to: E.164 destination phone number.
+            template_name: Approved template name in Meta Business Manager.
+            lang_code: BCP-47 language code registered with the template (default: en_US).
+            components: Optional list of template components (header, body, button parameters).
+        """
+        msg = {
+            "messaging_product": "whatsapp",
+            "to": to,
+            "type": "template",
+            "template": {
+                "name": template_name,
+                "language": {"code": lang_code},
+            }
+        }
+        if components:
+            msg["template"]["components"] = components
+        return {
+            "originationPhoneNumberId": self.config["whatsapp_phone_number_id"],
+            "metaApiVersion": self.config["meta_api_version"],
+            "message": json.dumps(msg).encode("utf-8"),
+        }
+
     def build_email(self, to: str, subject: str, body: str) -> dict:
         return {"FromEmailAddress": self.config["email_from"], "Destination": {"ToAddresses": [to]},
                 "Content": {"Simple": {"Subject": {"Data": subject}, "Body": {"Text": {"Data": body}}}}}
