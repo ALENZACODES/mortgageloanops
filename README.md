@@ -20,7 +20,7 @@ Borrower messages go out through **AWS End User Messaging SMS and RCS**, **AWS E
 git clone https://github.com/ALENZACODES/mortgageloanops && cd mortgageloanops
 python -m mortgageloanops demo        # runs 3 sample files, writes the would-be AWS requests to ./outbox
 python -m mortgageloanops serve 8000  # web UI at http://localhost:8000
-pip install pytest && pytest -q       # 73 tests incl. a 10,000-case property test
+pip install pytest && pytest -q       # 77 tests incl. a 10,000-case property test
 ```
 
 Requires Python 3.10+. No third-party packages are needed for dry-run mode.

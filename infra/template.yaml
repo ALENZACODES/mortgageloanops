@@ -41,9 +41,24 @@ Resources:
       Handler: mortgageloanops.lambda_handler.inbound_handler
       Policies:
         - Statement:
-            - {Effect: Allow, Action: ['ses:SendEmail', 'sms-voice:SendTextMessage', 'social-messaging:SendWhatsAppMessage', 'bedrock:InvokeModel'], Resource: '*'}
+            - {Effect: Allow, Action: ['ses:SendEmail', 'sms-voice:SendTextMessage', 'social-messaging:SendWhatsAppMessage', 'bedrock:InvokeModel', 'bedrock:InvokeAgent'], Resource: '*'}
       Events:
         FromSns: {Type: SNS, Properties: {Topic: !Ref InboundTopic}}
+
+  AgentCoreFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Bedrock AgentCore action-group executor for MortgageLoanOps
+      Handler: mortgageloanops.lambda_agentcore.lambda_handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - {Effect: Allow, Action: ['bedrock:InvokeModel', 'bedrock:InvokeAgent'], Resource: '*'}
+      Environment:
+        Variables:
+          MLO_BEDROCK_MODEL_ID: !Ref BedrockModelId
+          MLO_LIVE: !Ref LiveMode
 Outputs:
   ApiUrl: {Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com'}
+  AgentCoreFunctionArn: {Value: !GetAtt AgentCoreFunction.Arn, Description: Register this ARN as the AgentCore action-group executor}
   InboundTopicArn: {Value: !Ref InboundTopic, Description: Set as the two-way messaging destination for your SMS number / WhatsApp number}

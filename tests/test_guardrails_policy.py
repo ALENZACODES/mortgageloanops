@@ -111,3 +111,40 @@ def test_renewal_without_posted_rate_uses_market_and_flags_it(tmp_path):
     r = process_application(app, mk(tmp_path))
     assert "posted_rate_assumption" in r and any("Market context" in l for l in r["broker_handoff"]["summary"])
     assert "%" not in str(next(tmp_path.glob("sms-*.json")).read_text())  # no rates in borrower message
+
+
+# ── AgentCore tests ───────────────────────────────────────────────────────────
+
+def test_agentcore_handle_no_model_returns_graceful_message():
+    import os
+    from mortgageloanops.agentcore import handle
+    env_backup = os.environ.pop("MLO_BEDROCK_MODEL_ID", None)
+    try:
+        r = handle({"inputText": "What is the GDS limit?", "sessionId": "test-1"})
+        assert "not configured" in r["response"]["responseBody"]["TEXT"]["body"]
+        assert r["sessionId"] == "test-1"
+    finally:
+        if env_backup:
+            os.environ["MLO_BEDROCK_MODEL_ID"] = env_backup
+
+
+def test_agentcore_handle_empty_input():
+    from mortgageloanops.agentcore import handle
+    r = handle({"inputText": "", "sessionId": "test-2"})
+    assert "No question" in r["response"]["responseBody"]["TEXT"]["body"]
+
+
+def test_agentcore_handle_guardrail_blocks_prohibited_input():
+    from mortgageloanops.agentcore import handle
+    r = handle({"inputText": "guarantee me approval for this mortgage", "sessionId": "test-3"})
+    body = r["response"]["responseBody"]["TEXT"]["body"]
+    assert "guarantee" not in body.lower() or "can't" in body.lower() or "won't" in body.lower()
+
+
+def test_agentcore_response_envelope_shape():
+    from mortgageloanops.agentcore import handle
+    r = handle({"inputText": "", "sessionId": "envelope-check"})
+    assert "messageVersion" in r
+    assert "response" in r and "responseBody" in r["response"]
+    assert "TEXT" in r["response"]["responseBody"]
+    assert "sessionId" in r
