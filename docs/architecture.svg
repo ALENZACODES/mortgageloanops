@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" font-family="Inter,Helvetica,Arial,sans-serif">
+<defs><marker id="a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#6b7280"/></marker></defs>
+<rect width="1280" height="720" fill="#0b0f14"/>
+<text x="40" y="52" fill="#e6edf3" font-size="26" font-weight="700">MortgageLoanOps — architecture</text>
+<text x="40" y="78" fill="#8b949e" font-size="14">Borrower messages leave only through AWS End User Messaging (SMS, WhatsApp) and Amazon SES, after a guardrail check.</text>
+<g font-size="15" fill="#e6edf3">
+<rect x="40" y="120" width="190" height="90" rx="12" fill="#161b22" stroke="#30363d"/><text x="135" y="158" text-anchor="middle" font-weight="700">Borrower / Broker</text><text x="135" y="182" text-anchor="middle" fill="#8b949e" font-size="13">web UI · JSON API</text>
+<rect x="290" y="120" width="230" height="90" rx="12" fill="#161b22" stroke="#238636"/><text x="405" y="158" text-anchor="middle" font-weight="700">Pipeline API</text><text x="405" y="182" text-anchor="middle" fill="#8b949e" font-size="13">intake · audit trail · handoff</text>
+<rect x="580" y="100" width="210" height="80" rx="12" fill="#161b22" stroke="#30363d"/><text x="685" y="134" text-anchor="middle" font-weight="700">LendOps</text><text x="685" y="158" text-anchor="middle" fill="#8b949e" font-size="12">B-20 · insured rules · lenders</text>
+<rect x="580" y="196" width="210" height="80" rx="12" fill="#161b22" stroke="#30363d"/><text x="685" y="230" text-anchor="middle" font-weight="700">IRD</text><text x="685" y="254" text-anchor="middle" fill="#8b949e" font-size="12">penalty · break-even refinance</text>
+<rect x="580" y="292" width="210" height="80" rx="12" fill="#161b22" stroke="#30363d"/><text x="685" y="326" text-anchor="middle" font-weight="700">Benchmark</text><text x="685" y="350" text-anchor="middle" fill="#8b949e" font-size="12">indexed home value</text>
+<rect x="850" y="196" width="220" height="80" rx="12" fill="#161b22" stroke="#30363d"/><text x="960" y="230" text-anchor="middle" font-weight="700">Screening interface</text><text x="960" y="254" text-anchor="middle" fill="#8b949e" font-size="12">NOT_SCREENED without a list</text>
+<rect x="290" y="420" width="230" height="80" rx="12" fill="#161b22" stroke="#d29922"/><text x="405" y="454" text-anchor="middle" font-weight="700">Compliance guardrail</text><text x="405" y="478" text-anchor="middle" fill="#8b949e" font-size="12">no rates · approvals · guarantees</text>
+<rect x="580" y="420" width="660" height="260" rx="14" fill="#10161d" stroke="#ff9900" stroke-width="2"/><text x="610" y="452" fill="#ff9900" font-weight="700">AWS (runtime) — Messenger, 5 s timeout per channel</text>
+<rect x="610" y="480" width="180" height="90" rx="10" fill="#161b22" stroke="#ff9900"/><text x="700" y="512" text-anchor="middle" font-weight="700" font-size="14">End User Messaging</text><text x="700" y="532" text-anchor="middle" font-weight="700" font-size="14">SMS</text><text x="700" y="554" text-anchor="middle" fill="#8b949e" font-size="11">SendTextMessage</text>
+<rect x="830" y="480" width="180" height="90" rx="10" fill="#161b22" stroke="#ff9900"/><text x="920" y="512" text-anchor="middle" font-weight="700" font-size="14">End User Messaging</text><text x="920" y="532" text-anchor="middle" font-weight="700" font-size="14">Social (WhatsApp)</text><text x="920" y="554" text-anchor="middle" fill="#8b949e" font-size="11">SendWhatsAppMessage</text>
+<rect x="1050" y="480" width="170" height="90" rx="10" fill="#161b22" stroke="#ff9900"/><text x="1135" y="518" text-anchor="middle" font-weight="700" font-size="14">Amazon SES</text><text x="1135" y="554" text-anchor="middle" fill="#8b949e" font-size="11">SendEmail (sesv2)</text>
+<rect x="780" y="600" width="260" height="56" rx="10" fill="#161b22" stroke="#30363d"/><text x="910" y="634" text-anchor="middle" font-size="14">Secure portal link (last fallback)</text>
+</g>
+<g stroke="#6b7280" stroke-width="2" fill="none" marker-end="url(#a)">
+<path d="M230 165 H290"/><path d="M520 150 H580"/><path d="M520 165 C550 165 550 236 580 236"/><path d="M520 180 C545 180 545 332 580 332"/><path d="M405 120 V92 H960 V196" stroke-dasharray="5 4"/>
+<path d="M405 210 V420"/><path d="M520 460 H610"/><path d="M790 525 H830"/><path d="M1010 525 H1050"/><path d="M1135 570 V628 H1040"/>
+</g>
+<text x="798" y="516" fill="#8b949e" font-size="11">on fail</text><text x="1018" y="516" fill="#8b949e" font-size="11">on fail</text>
+</svg>

@@ -1,0 +1,2 @@
+boto3>=1.35   # only needed for live AWS mode (MLO_LIVE=1)
+pytest        # only for running the tests

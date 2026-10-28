@@ -1,0 +1,14 @@
+[project]
+name = "mortgageloanops"
+version = "0.1.0"
+description = "Canadian mortgage operations on AWS: B-20 qualification, IRD penalty, home-value benchmark, guardrailed borrower messaging"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = []
+
+[project.optional-dependencies]
+aws = ["boto3>=1.35"]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

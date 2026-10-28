@@ -1,0 +1,8 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    { "Sid": "SendEmail", "Effect": "Allow", "Action": ["ses:SendEmail"], "Resource": "*" },
+    { "Sid": "SendSms", "Effect": "Allow", "Action": ["sms-voice:SendTextMessage"], "Resource": "*" },
+    { "Sid": "SendWhatsApp", "Effect": "Allow", "Action": ["social-messaging:SendWhatsAppMessage"], "Resource": "*" }
+  ]
+}
