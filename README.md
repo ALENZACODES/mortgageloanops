@@ -47,6 +47,8 @@ MLO_LIVE=1 python scripts/live_smoke.py +1YOURMOBILE you@example.com   # one rea
 ```
 Point your SMS number's / WhatsApp number's two-way destination at the SNS topic output to enable inbound replies.
 
+Step-by-step demo and a plain table of what is real vs. pending: [docs/DEMO_WALKTHROUGH.md](docs/DEMO_WALKTHROUGH.md)
+
 ## How a file flows
 
 `intake → screening (honest: NOT_SCREENED without a list) → B-20 qualification → lender match → IRD/refinance (renewals) → home value → guardrail → RCS (if configured) → SMS → WhatsApp → email → portal → broker handoff + audit trail`
