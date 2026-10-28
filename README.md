@@ -43,13 +43,13 @@ See [docs/AWS_SETUP.md](docs/AWS_SETUP.md) and [infra/iam-policy.json](infra/iam
 
 ```bash
 sam build && sam deploy --guided      # uses infra/template.yaml (Lambda + HTTP API + SNS topic)
-MLO_LIVE=1 python scripts/live_smoke.py +1YOURMOBILE you@example.com   # one real SMS, WhatsApp and SES message
+MLO_LIVE=1 python scripts/live_smoke.py +1YOURMOBILE you@example.com   # one real message per configured channel (RCS if set, SMS, WhatsApp, SES)
 ```
 Point your SMS number's / WhatsApp number's two-way destination at the SNS topic output to enable inbound replies.
 
 ## How a file flows
 
-`intake → screening (honest: NOT_SCREENED without a list) → B-20 qualification → lender match → IRD/refinance (renewals) → home value → guardrail → SMS → WhatsApp → email → portal → broker handoff + audit trail`
+`intake → screening (honest: NOT_SCREENED without a list) → B-20 qualification → lender match → IRD/refinance (renewals) → home value → guardrail → RCS (if configured) → SMS → WhatsApp → email → portal → broker handoff + audit trail`
 
 Architecture diagram: [docs/architecture.svg](docs/architecture.svg) · details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
@@ -60,7 +60,7 @@ Architecture diagram: [docs/architecture.svg](docs/architecture.svg) · details:
 - **Screening** ships no sanctions/PEP data and never reports a person as "clear". Connect a licensed provider for production.
 - **Home value** is a regional-index estimate (indicative anchors), not an appraisal or the full AVM. The AVM lives in the Benchmark Home Value project; its reported held-out accuracy is documented there.
 - **Tests** are unit tests and randomized invariant tests (10,000 cases each), not a backtest against real lending outcomes.
-- **Live AWS** paths (SMS, WhatsApp, SES, Bedrock Converse, SNS inbound parsing, SAM template) are verified with fake clients that assert request shapes and logic. They have **not** been run against a real AWS account from this repository yet; inbound event shapes should be confirmed against your own SNS payloads. Run `scripts/live_smoke.py` and `sam deploy` to prove them.
+- **Live AWS** paths (RCS, SMS, WhatsApp, SES, Bedrock Converse, SNS inbound parsing, SAM template) are verified with fake clients that assert request shapes and logic. They have **not** been run against a real AWS account from this repository yet; inbound event shapes should be confirmed against your own SNS payloads. Run `scripts/live_smoke.py` and `sam deploy` to prove them.
 
 ## License
 

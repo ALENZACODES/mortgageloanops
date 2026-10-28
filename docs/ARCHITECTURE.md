@@ -29,11 +29,12 @@ Borrower / broker ── HTTPS ──> MortgageLoanOps API (stdlib server or any
 ## AWS services used at runtime
 | Service | API call | Where |
 |---|---|---|
+| AWS End User Messaging RCS | `pinpoint-sms-voice-v2` `SendTextMessage` with an RCS agent ARN as `OriginationIdentity` | `messaging.py::Messenger._send("rcs")` (only when `MLO_RCS_AGENT_ARN` is set) |
 | AWS End User Messaging SMS | `pinpoint-sms-voice-v2` `SendTextMessage` | `messaging.py::Messenger._send("sms")` |
 | AWS End User Messaging Social (WhatsApp) | `socialmessaging` `SendWhatsAppMessage` | `messaging.py::Messenger._send("whatsapp")` |
 | Amazon SES | `sesv2` `SendEmail` | `messaging.py::Messenger._send("email")` |
 
-Request payloads are built by `build_sms`, `build_whatsapp` and `build_email` and are asserted field by field in `tests/test_aws_messaging.py`.
+Request payloads are built by `build_rcs`, `build_sms`, `build_whatsapp` and `build_email` and are asserted field by field in `tests/test_aws_messaging.py`.
 
 ## Design decisions
 - **Guardrail before channel**: a blocked message never reaches any AWS API (tested).
