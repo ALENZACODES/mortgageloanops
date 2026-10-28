@@ -120,3 +120,37 @@ python scripts/agentcore_demo.py # AgentCore agentic loop dry-run
   python scripts/agentcore_demo.py
   ```
 - **DEMO_WALKTHROUGH.md** — step-by-step guide to what to look for in each output.
+
+---
+
+## Observability (production-readiness signal for CDS PMs)
+
+CloudWatch custom metrics emitted by `lambda_handler._emit` (namespace `MortgageLoanOps`, gated by `MLO_LIVE`):
+
+| Metric | Dimensions | What it shows |
+|---|---|---|
+| `FileProcessed` | Kind (purchase/renewal/homevalue) | Volume and mix by file type |
+| `ProcessLatencyMs` | Kind | P50/P99 processing time per file type |
+| `QualifyPass` | Kind | Approval rate for monitoring drift |
+| `ProcessError` | Kind | Error rate per pipeline path |
+| `InboundMessage` | Channel (sms/whatsapp/rcs) | Inbound channel breakdown |
+| `ConversationAction` | Action (stop/start/help/broker/response) | Conversation engagement rates |
+
+These feed naturally into a CloudWatch dashboard and alarm on `ProcessError > 0` or `QualifyPass` drift — standard production SRE practice.
+
+---
+
+## Quick reference for reviewers
+
+```bash
+# See the full agentic loop in under 10 seconds:
+python scripts/agentcore_demo.py
+
+# Run all 78 tests (including 10,000-case property test):
+pytest -q
+
+# See a renewal file auto-fill the BoC posted rate and emit market context:
+python -m mortgageloanops demo 2>&1 | grep -A 20 "renewal_ird"
+```
+
+All three commands require only Python 3.10+ and no AWS account or API key.

@@ -14,11 +14,21 @@ Canadian mortgage brokers lose leads and time between the first inquiry and the 
 - **Bedrock agent + two-way conversation:** an agent answers borrower/broker questions by calling the real calculators (it never does the maths itself), and inbound SMS/WhatsApp replies are handled with opt-out (STOP), help and broker-callback logic.
 - **Borrower messaging on AWS CDS:** after a guardrail check that blocks rate quotes, approval promises, guarantees, pressure language and requests for SIN/card/password/one-time codes, plus a send-time policy (STOP suppression, optional consent and quiet hours), the borrower is messaged through **AWS End User Messaging RCS** (via an RCS agent), then **SMS**, then **AWS End User Messaging Social (WhatsApp)**, then **Amazon SES**, with a 5-second per-channel timeout and a secure-portal fallback. Each file also produces an audit trail and a broker hand-off report.
 
-**How AWS is used (runtime):** `pinpoint-sms-voice-v2 SendTextMessage`, `socialmessaging SendWhatsAppMessage`, `sesv2 SendEmail` in `mortgageloanops/messaging.py`.
+**AWS services used (6):**
+| Service | File | API call |
+|---|---|---|
+| AWS End User Messaging — RCS | `messaging.py` | `pinpoint-sms-voice-v2.send_text_message` (RCS agent ARN as OriginationIdentity) |
+| AWS End User Messaging — SMS | `messaging.py` | `pinpoint-sms-voice-v2.send_text_message` |
+| AWS End User Messaging Social — WhatsApp | `messaging.py` | `socialmessaging.send_whatsapp_message`; also `build_whatsapp_template()` for business-initiated outbound |
+| Amazon SES | `messaging.py` | `sesv2.send_email` |
+| Amazon Bedrock (Converse + tool-use) | `agent.py` | `bedrock-runtime.converse` with `toolConfig`; model must call real calculators — never free-forms the math |
+| AWS Bedrock AgentCore | `agentcore.py` + `lambda_agentcore.py` | Action-group Lambda executor; broker Q&A via AgentCore envelope; `AgentCoreFunction` in `infra/template.yaml` |
 
-**WhatsApp prize:** WhatsApp is the second channel in the fallback chain. The message is built as a WhatsApp Cloud API text payload and sent with `socialmessaging.send_whatsapp_message(originationPhoneNumberId, metaApiVersion, message)`.
+**WhatsApp prize:** WhatsApp is a primary channel in the fallback chain. Two message types: `build_whatsapp()` for session replies; `build_whatsapp_template()` for business-initiated messages (renewal reminders, approval notices) that bypass Meta's 24-hour contact window. Sent via `socialmessaging.send_whatsapp_message(originationPhoneNumberId, metaApiVersion, message)`.
 
-**Verification:** 77 automated tests, including a 10,000-case randomized invariant test, request-shape tests for all three AWS calls using fake clients, and timeout/fallback tests. Tests were checked to fail when the code is deliberately broken.
+**Bedrock AgentCore:** `agentcore.py` implements the action-group Lambda protocol (`messageVersion`, `sessionId`, `response.responseBody.TEXT`). A broker-safe guardrail distinction is applied: rate quotes are allowed inbound from brokers (only `SENSITIVE_REQUEST` / `SENSITIVE_DATA_LEAK` blocked) but blocked outbound to borrowers. Run `python scripts/agentcore_demo.py` to see the full agentic loop without an AWS account.
+
+**Verification:** 78 automated tests, including a 10,000-case randomized invariant test, request-shape tests for all AWS calls (RCS, SMS, WhatsApp, SES, AgentCore envelope shape, guardrail policy, BoC rate feed provenance) using fake clients, and timeout/fallback tests. Tests were checked to fail when the code is deliberately broken.
 
 **Honest limitations:** lender policy is illustrative by category (34 lender names, none panel-verified); identity/PEP screening is an interface that never reports "clear"; the home value is an indicative index estimate, not an appraisal; the AI agent uses Amazon Bedrock Converse tool use **and** is wrapped in a Bedrock AgentCore action-group Lambda (`agentcore.py` + `lambda_agentcore.py`); the AWS paths are tested with fake clients and have not yet been run on a live account by the author of this text. Update this line after you run `scripts/live_smoke.py` and deploy with `sam deploy`.
 
