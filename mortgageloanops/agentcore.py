@@ -58,9 +58,12 @@ def handle(event: dict, context: Any = None) -> dict:
     if not question:
         return _format_response(session_id, "No question provided.", [])
 
-    # Guard the incoming question too
+    # Guard the incoming question for data-leak / sensitive-request patterns only.
+    # Rate quotes and approval language in a broker question are not violations.
+    _BROKER_BLOCKED = {"SENSITIVE_REQUEST", "SENSITIVE_DATA_LEAK"}
     g_in = guardrail.check(question)
-    if not g_in["allowed"]:
+    inbound_blocked = [v for v in g_in.get("violations", []) if v in _BROKER_BLOCKED]
+    if inbound_blocked:
         safe = guardrail.safe_replacement()
         return _format_response(session_id, safe, [])
 
@@ -71,7 +74,11 @@ def handle(event: dict, context: Any = None) -> dict:
     try:
         agent = Agent(model_id=model_id)
         result = agent.ask(question)
-        return _format_response(session_id, result["answer"], result.get("tool_calls", []))
+        # AgentCore is a broker-facing tool; the output guardrail in agent.py is
+        # designed for borrower messages. Pass the raw answer here so brokers
+        # get the full calculator output (rate figures, GDS/TDS numbers).
+        answer = result.get("_raw_answer") or result["answer"]
+        return _format_response(session_id, answer, result.get("tool_calls", []))
     except Exception as exc:  # pylint: disable=broad-except
         logger.exception("AgentCore handler error")
         return _format_response(session_id, "An error occurred; a licensed broker will follow up.", [])

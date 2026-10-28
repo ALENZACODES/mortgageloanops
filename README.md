@@ -19,7 +19,8 @@ Borrower messages go out through **AWS End User Messaging SMS and RCS**, **AWS E
 ```bash
 git clone https://github.com/ALENZACODES/mortgageloanops && cd mortgageloanops
 python -m mortgageloanops demo        # runs 3 sample files, writes the would-be AWS requests to ./outbox
-python -m mortgageloanops serve 8000  # web UI at http://localhost:8000
+python -m mortgageloanops serve 8000
+python scripts/agentcore_demo.py  # AgentCore end-to-end broker Q&A (dry-run)  # web UI at http://localhost:8000
 pip install pytest && pytest -q       # 77 tests incl. a 10,000-case property test
 ```
 
@@ -35,6 +36,7 @@ export MLO_RCS_AGENT_ARN=arn:aws:sms-voice:...:rcs-agent/rcs-...   # optional: e
 export MLO_WHATSAPP_PHONE_NUMBER_ID=phone-number-id-... # from AWS End User Messaging Social
 export MLO_EMAIL_FROM=ops@your-verified-domain.com      # verified SES identity
 python -m mortgageloanops serve 8000
+python scripts/agentcore_demo.py  # AgentCore end-to-end broker Q&A (dry-run)
 ```
 
 See [docs/AWS_SETUP.md](docs/AWS_SETUP.md) and [infra/iam-policy.json](infra/iam-policy.json).

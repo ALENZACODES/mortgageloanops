@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 620" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#555"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="620" fill="#f8f9fa" rx="8"/>
+  <text x="450" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#1a1a2e">MortgageLoanOps — AWS Architecture</text>
+
+  <!-- AWS Cloud border -->
+  <rect x="20" y="45" width="860" height="560" rx="12" fill="none" stroke="#FF9900" stroke-width="2" stroke-dasharray="6,3"/>
+  <text x="38" y="62" font-size="11" fill="#FF9900" font-weight="bold">AWS</text>
+
+  <!-- ── INBOUND CHANNEL (left column) ── -->
+  <!-- Borrower -->
+  <rect x="40" y="80" width="120" height="44" rx="6" fill="#4A90D9" stroke="#2c6fad" stroke-width="1.5"/>
+  <text x="100" y="97" text-anchor="middle" fill="white" font-weight="bold">Borrower</text>
+  <text x="100" y="114" text-anchor="middle" fill="white" font-size="11">SMS / WhatsApp</text>
+
+  <!-- SNS -->
+  <rect x="200" y="80" width="120" height="44" rx="6" fill="#E8631A" stroke="#b04d12"/>
+  <text x="260" y="97" text-anchor="middle" fill="white" font-weight="bold">Amazon SNS</text>
+  <text x="260" y="114" text-anchor="middle" fill="white" font-size="11">Two-way inbound</text>
+
+  <!-- Lambda inbound -->
+  <rect x="360" y="80" width="140" height="44" rx="6" fill="#F4A261" stroke="#d4824e"/>
+  <text x="430" y="97" text-anchor="middle" fill="#1a1a2e" font-weight="bold">Lambda</text>
+  <text x="430" y="114" text-anchor="middle" fill="#1a1a2e" font-size="11">lambda_handler.py</text>
+
+  <!-- arrows inbound -->
+  <line x1="160" y1="102" x2="198" y2="102" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="320" y1="102" x2="358" y2="102" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ── PIPELINE BOX ── -->
+  <rect x="360" y="160" width="300" height="180" rx="8" fill="#EAF4FB" stroke="#2c6fad" stroke-width="1.5"/>
+  <text x="510" y="180" text-anchor="middle" font-weight="bold" fill="#2c6fad" font-size="13">pipeline.py</text>
+
+  <rect x="375" y="188" width="120" height="32" rx="5" fill="#2c6fad"/>
+  <text x="435" y="208" text-anchor="middle" fill="white" font-size="12">qualify.py (B-20)</text>
+
+  <rect x="375" y="226" width="120" height="32" rx="5" fill="#2c6fad"/>
+  <text x="435" y="246" text-anchor="middle" fill="white" font-size="12">ird.py (IRD/penalty)</text>
+
+  <rect x="375" y="264" width="120" height="32" rx="5" fill="#2c6fad"/>
+  <text x="435" y="284" text-anchor="middle" fill="white" font-size="12">homevalue.py (AVM)</text>
+
+  <rect x="505" y="188" width="140" height="32" rx="5" fill="#2c6fad"/>
+  <text x="575" y="208" text-anchor="middle" fill="white" font-size="12">market.py (BoC feed)</text>
+
+  <rect x="505" y="226" width="140" height="32" rx="5" fill="#2c6fad"/>
+  <text x="575" y="246" text-anchor="middle" fill="white" font-size="12">kyc.py / insured.py</text>
+
+  <rect x="505" y="264" width="140" height="32" rx="5" fill="#2c6fad"/>
+  <text x="575" y="284" text-anchor="middle" fill="white" font-size="12">guardrail + policy</text>
+
+  <!-- arrow lambda → pipeline -->
+  <line x1="430" y1="124" x2="430" y2="158" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ── AGENTCORE PATH (right column) ── -->
+  <rect x="700" y="80" width="160" height="44" rx="6" fill="#146EB4" stroke="#0d4a7a"/>
+  <text x="780" y="97" text-anchor="middle" fill="white" font-weight="bold">Bedrock AgentCore</text>
+  <text x="780" y="114" text-anchor="middle" fill="white" font-size="11">Broker console / API</text>
+
+  <rect x="700" y="160" width="160" height="44" rx="6" fill="#F4A261" stroke="#d4824e"/>
+  <text x="780" y="177" text-anchor="middle" fill="#1a1a2e" font-weight="bold">Lambda</text>
+  <text x="780" y="194" text-anchor="middle" fill="#1a1a2e" font-size="11">lambda_agentcore.py</text>
+
+  <rect x="700" y="240" width="160" height="44" rx="6" fill="#146EB4" stroke="#0d4a7a"/>
+  <text x="780" y="257" text-anchor="middle" fill="white" font-weight="bold">Amazon Bedrock</text>
+  <text x="780" y="274" text-anchor="middle" fill="white" font-size="11">Converse + tool-use</text>
+
+  <!-- AgentCore arrows -->
+  <line x1="780" y1="124" x2="780" y2="158" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="780" y1="204" x2="780" y2="238" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="700" y1="262" x2="662" y2="262" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="672" y="256" font-size="10" fill="#555">tool calls</text>
+
+  <!-- ── MESSAGING OUTPUT (bottom) ── -->
+  <rect x="40" y="390" width="820" height="60" rx="8" fill="#fff3e0" stroke="#FF9900" stroke-width="1.5"/>
+  <text x="450" y="413" text-anchor="middle" font-weight="bold" fill="#b45309" font-size="13">messaging.py — Send-time guardrail + channel fallback (5 s timeout per channel)</text>
+
+  <!-- Channels -->
+  <rect x="50" y="420" width="110" height="24" rx="4" fill="#E8631A"/>
+  <text x="105" y="436" text-anchor="middle" fill="white" font-size="11">RCS (EUM)</text>
+
+  <rect x="170" y="420" width="110" height="24" rx="4" fill="#E8631A"/>
+  <text x="225" y="436" text-anchor="middle" fill="white" font-size="11">SMS (EUM)</text>
+
+  <rect x="290" y="420" width="130" height="24" rx="4" fill="#1DA462"/>
+  <text x="355" y="436" text-anchor="middle" fill="white" font-size="11">WhatsApp (EUM Social)</text>
+
+  <rect x="430" y="420" width="110" height="24" rx="4" fill="#E8631A"/>
+  <text x="485" y="436" text-anchor="middle" fill="white" font-size="11">SES Email</text>
+
+  <rect x="550" y="420" width="110" height="24" rx="4" fill="#999"/>
+  <text x="605" y="436" text-anchor="middle" fill="white" font-size="11">Portal fallback</text>
+
+  <!-- Pipeline → messaging arrow -->
+  <line x1="510" y1="340" x2="510" y2="388" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ── S3/AUDIT (bottom right) ── -->
+  <rect x="690" y="390" width="160" height="60" rx="8" fill="#D4EDDA" stroke="#28a745" stroke-width="1.5"/>
+  <text x="770" y="413" text-anchor="middle" fill="#155724" font-weight="bold">Amazon S3</text>
+  <text x="770" y="430" text-anchor="middle" fill="#155724" font-size="11">outbox/ audit trail</text>
+  <text x="770" y="446" text-anchor="middle" fill="#155724" font-size="11">broker hand-off JSON</text>
+
+  <line x1="660" y1="420" x2="688" y2="420" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ── COMPLIANCE BOX (bottom) ── -->
+  <rect x="100" y="510" width="700" height="50" rx="8" fill="#f0e6ff" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="450" y="529" text-anchor="middle" font-weight="bold" fill="#4c1d95">Compliance layer</text>
+  <text x="450" y="548" text-anchor="middle" fill="#4c1d95" font-size="12">guardrail.py (7 rules, NFKC norm, PII redact)  ·  compliance.py (STOP/START, consent, quiet hours)</text>
+
+  <line x1="450" y1="450" x2="450" y2="508" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+</svg>

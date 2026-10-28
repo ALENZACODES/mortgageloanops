@@ -92,6 +92,7 @@ class Agent:
                 text = "".join(b.get("text", "") for b in msg["content"])
                 g = guardrail.check(text)
                 return {"answer": text if g["allowed"] else "I can't share that in a message; a licensed broker will follow up.",
+                        "_raw_answer": text,
                         "guardrail": g, "tool_calls": tool_calls}
             results = []
             for b in msg["content"]:

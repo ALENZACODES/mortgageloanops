@@ -18,16 +18,16 @@ Canadian mortgage brokers lose leads and time between the first inquiry and the 
 
 **WhatsApp prize:** WhatsApp is the second channel in the fallback chain. The message is built as a WhatsApp Cloud API text payload and sent with `socialmessaging.send_whatsapp_message(originationPhoneNumberId, metaApiVersion, message)`.
 
-**Verification:** 71 automated tests, including a 10,000-case randomized invariant test, request-shape tests for all three AWS calls using fake clients, and timeout/fallback tests. Tests were checked to fail when the code is deliberately broken.
+**Verification:** 77 automated tests, including a 10,000-case randomized invariant test, request-shape tests for all three AWS calls using fake clients, and timeout/fallback tests. Tests were checked to fail when the code is deliberately broken.
 
-**Honest limitations:** lender policy is illustrative by category (34 lender names, none panel-verified); identity/PEP screening is an interface that never reports "clear"; the home value is an indicative index estimate, not an appraisal; the AI agent uses Amazon Bedrock Converse tool use (not the AgentCore runtime); the AWS paths are tested with fake clients and have not yet been run on a live account by the author of this text. Update this line after you run `scripts/live_smoke.py` and deploy with `sam deploy`.
+**Honest limitations:** lender policy is illustrative by category (34 lender names, none panel-verified); identity/PEP screening is an interface that never reports "clear"; the home value is an indicative index estimate, not an appraisal; the AI agent uses Amazon Bedrock Converse tool use **and** is wrapped in a Bedrock AgentCore action-group Lambda (`agentcore.py` + `lambda_agentcore.py`); the AWS paths are tested with fake clients and have not yet been run on a live account by the author of this text. Update this line after you run `scripts/live_smoke.py` and deploy with `sam deploy`.
 
 ## Submission checklist
 | Item | Status |
 |---|---|
 | Public repo with MIT license visible in About | Done: https://github.com/ALENZACODES/mortgageloanops |
 | Run instructions | Done (README) |
-| Architecture diagram | Done: docs/architecture.svg / .png |
+| Architecture diagram | Done: docs/ARCHITECTURE.svg |
 | Text description | Done (above) |
 | ~3-minute demo video | Done: 2:58, silent, captioned, dry-run. **Record a short live-AWS clip and voiceover before submitting if you can** |
 | Deployed project URL or interaction instructions | `sam deploy` template + Lambda handlers included; **not deployed yet, needs your AWS account** |
