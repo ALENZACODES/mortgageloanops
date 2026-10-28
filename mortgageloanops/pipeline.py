@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 
-from . import qualify, lenders, ird, homevalue, kyc, insured
+from . import qualify, lenders, ird, homevalue, kyc, insured, market
 from .messaging import Messenger
 
 
@@ -38,6 +38,12 @@ def process_application(app: dict, messenger: Messenger | None = None, watchlist
         out["insurance_required"] = insured.is_insurable(app["price"], app["down_payment"])
         log("lender_match", count=len(out["lender_matches"]))
     elif kind == "RENEWAL":
+        ctx = market.context()
+        out["market_context"] = ctx
+        if not app.get("is_variable", False) and app.get("current_posted_rate") is None:
+            # fall back to the national BoC average only when the file has no lender posted rate; flagged below
+            app = {**app, "current_posted_rate": ctx["posted_5yr_conventional"]["rate"]}
+            out["posted_rate_assumption"] = "current posted rate taken from BoC national average; replace with the lender's posted rate"
         pen = ird.penalty(balance=app["balance"], contract_rate=app["contract_rate"], months_remaining=app["months_remaining"],
                           is_variable=app.get("is_variable", False), comparison_rate=app.get("comparison_rate"),
                           original_posted_rate=app.get("original_posted_rate"), current_posted_rate=app.get("current_posted_rate"))
@@ -62,6 +68,11 @@ def process_application(app: dict, messenger: Messenger | None = None, watchlist
             broker_lines.append(f"Balance ${app['balance']:,.0f} is about {out['current_ltv']}% of that estimate")
     if pen_d:
         broker_lines.append(f"Estimated prepayment penalty ${pen_d['penalty']:,.0f} ({pen_d.get('method', 'IRD/3-month')}); confirm with the lender's statement")
+    if "market_context" in out:
+        c = out["market_context"]
+        broker_lines.append(f"Market context (BoC, {c['posted_5yr_conventional']['date']}): 5-yr conventional posted {c['posted_5yr_conventional']['rate']}%, prime {c['prime']['rate']}% (national averages, not a quote)")
+    if "posted_rate_assumption" in out:
+        broker_lines.append("Note: " + out["posted_rate_assumption"])
     if refi:
         broker_lines.append(f"Refinance analysis: {refi['recommendation']}")
 

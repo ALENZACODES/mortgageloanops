@@ -91,3 +91,23 @@ def test_purchase_file_with_value_shows_home_value_in_broker_summary(tmp_path):
     from mortgageloanops.samples import SAMPLES
     r = process_application(SAMPLES["purchase_fthb"], mk(tmp_path))
     assert any("Indicative home value" in l for l in r["broker_handoff"]["summary"])
+
+
+def test_market_data_lookup_and_provenance():
+    from mortgageloanops import market
+    c = market.context()
+    assert c["posted_5yr_conventional"]["rate"] > 0 and "not a lender quote" in c["scope"]
+    r = market.rate_on("prime_rate", "2020-01-05")
+    assert r["date"] <= "2020-01-05" and r["rate"] == 3.95
+    import pytest as _p
+    with _p.raises(ValueError):
+        market.rate_on("prime_rate", "1999-01-01")
+
+
+def test_renewal_without_posted_rate_uses_market_and_flags_it(tmp_path):
+    from mortgageloanops.pipeline import process_application
+    from mortgageloanops.samples import SAMPLES
+    app = {k: v for k, v in SAMPLES["renewal_ird"].items() if k != "current_posted_rate"}
+    r = process_application(app, mk(tmp_path))
+    assert "posted_rate_assumption" in r and any("Market context" in l for l in r["broker_handoff"]["summary"])
+    assert "%" not in str(next(tmp_path.glob("sms-*.json")).read_text())  # no rates in borrower message
