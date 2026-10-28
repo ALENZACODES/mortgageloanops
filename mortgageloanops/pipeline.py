@@ -52,13 +52,33 @@ def process_application(app: dict, messenger: Messenger | None = None, watchlist
         log("home_value", estimate=out["home_value"]["estimate"])
 
     portal = f"https://portal.example.com/file/{app.get('id', 'demo')}"
-    body = (f"Hi {borrower['name'].split()[0]}, thanks for your mortgage inquiry. A licensed mortgage broker is reviewing your "
-            f"file and will contact you to discuss options. You can securely upload documents here: {portal}")
+    hv, pen_d, refi = out.get("home_value"), out.get("penalty"), out.get("refinance")
+    if hv and kind == "RENEWAL":
+        out["current_ltv"] = round(app["balance"] / hv["estimate"] * 100, 1)
+    broker_lines = []
+    if hv:
+        broker_lines.append(f"Indicative home value ${hv['estimate']:,.0f} (range ${hv['low']:,.0f}-${hv['high']:,.0f}, {hv['region']} index; not an appraisal)")
+        if "current_ltv" in out:
+            broker_lines.append(f"Balance ${app['balance']:,.0f} is about {out['current_ltv']}% of that estimate")
+    if pen_d:
+        broker_lines.append(f"Estimated prepayment penalty ${pen_d['penalty']:,.0f} ({pen_d.get('method', 'IRD/3-month')}); confirm with the lender's statement")
+    if refi:
+        broker_lines.append(f"Refinance analysis: {refi['recommendation']}")
+
+    first = borrower['name'].split()[0]
+    body = (f"Hi {first}, thanks for your mortgage inquiry. A licensed mortgage broker is reviewing your file and will contact you to discuss options.")
+    if hv:
+        body += (f" For context, an indicative value for your property is about ${hv['estimate']:,.0f} (range ${hv['low']:,.0f} to ${hv['high']:,.0f}). "
+                 "It is an estimate, not an appraisal.")
+    if pen_d:
+        body += f" Your estimated prepayment penalty is about ${pen_d['penalty']:,.0f}; your lender's statement is the final figure."
+    body += f" You can securely upload documents here: {portal}"
     delivery = messenger.send_with_fallback(borrower, "Your mortgage inquiry", body, portal, simulate_failures=simulate_failures)
     out["borrower_message"] = {"delivered_via": delivery["delivered_via"], "attempts": delivery["attempts"],
                                "blocked_by_guardrail": delivery.get("blocked_by_guardrail")}
     log("messaging", via=delivery["delivered_via"])
 
-    out["broker_handoff"] = {"requires_manual_review": screening["requires_manual_review"] or bool(out.get("qualification") and not out["qualification"]["passes"]),
+    out["broker_handoff"] = {"summary": broker_lines,
+                             "requires_manual_review": screening["requires_manual_review"] or bool(out.get("qualification") and not out["qualification"]["passes"]),
                              "audit": audit}
     return out

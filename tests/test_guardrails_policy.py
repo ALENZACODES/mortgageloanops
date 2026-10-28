@@ -72,3 +72,22 @@ def test_inbound_sin_is_redacted_in_transcript(tmp_path):
     m = mk(tmp_path); st = Store(str(tmp_path / "s.json")); conv = Conversation(m, st)
     conv.handle({"from": "+14165551234", "text": "my sin is 123-456-789", "channel": "sms"})
     assert "123-456-789" not in str(st.d["transcript"])
+
+
+def test_renewal_surfaces_ird_and_home_value_to_broker_and_borrower(tmp_path):
+    from mortgageloanops.pipeline import process_application
+    from mortgageloanops.samples import SAMPLES
+    r = process_application(SAMPLES["renewal_ird"], mk(tmp_path))
+    text = " ".join(r["broker_handoff"]["summary"])
+    assert "home value" in text and "prepayment penalty" in text and "Refinance analysis" in text
+    assert r["borrower_message"]["delivered_via"] == "sms" and not r["borrower_message"]["blocked_by_guardrail"]
+    sent = next(tmp_path.glob("sms-*.json")).read_text()
+    assert "indicative value" in sent and "prepayment penalty" in sent and "not an appraisal" in sent
+    assert r["current_ltv"] == round(400000 / r["home_value"]["estimate"] * 100, 1)
+
+
+def test_purchase_file_with_value_shows_home_value_in_broker_summary(tmp_path):
+    from mortgageloanops.pipeline import process_application
+    from mortgageloanops.samples import SAMPLES
+    r = process_application(SAMPLES["purchase_fthb"], mk(tmp_path))
+    assert any("Indicative home value" in l for l in r["broker_handoff"]["summary"])

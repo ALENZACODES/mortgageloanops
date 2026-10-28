@@ -7,7 +7,7 @@ git clone https://github.com/ALENZACODES/mortgageloanops && cd mortgageloanops
 python -m mortgageloanops demo          # 3 sample files: first-time buyer, renewal, refinance
 ls outbox                               # the exact AWS requests that would be sent (dry-run)
 python -m mortgageloanops serve 8000    # web UI: http://localhost:8000
-pytest -q                               # 69 tests incl. 10,000-case property tests
+pytest -q                               # 71 tests incl. 10,000-case property tests
 ```
 
 ## What to look for
