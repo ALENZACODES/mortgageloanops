@@ -10,7 +10,7 @@ Canadian mortgage operations on AWS in one small, dependency-free Python app. It
 
 **Also included:** a Bedrock Q&A agent that must call the real calculators for every number (`agent.py`, Amazon Bedrock Converse tool use; not the AgentCore runtime), two-way messaging that handles inbound SMS/WhatsApp replies with STOP/START/HELP/BROKER handling (`conversation.py`), and Lambda handlers plus a SAM template (`lambda_handler.py`, `infra/template.yaml`).
 
-Borrower messages go out through **AWS End User Messaging SMS and RCS**, **AWS End User Messaging Social (WhatsApp)** and **Amazon SES**, with a 5-second per-channel timeout and a secure-portal fallback. Channel order: **RCS** (when `MLO_RCS_AGENT_ARN` is set) → SMS → WhatsApp → email → portal. Every message passes a guardrail first: no rate quotes, no approval promises, no guarantees.
+Borrower messages go out through **AWS End User Messaging SMS and RCS**, **AWS End User Messaging Social (WhatsApp)** and **Amazon SES**, with a 5-second per-channel timeout and a secure-portal fallback. Channel order: **RCS** (when `MLO_RCS_AGENT_ARN` is set) → SMS → WhatsApp → email → portal. Every message passes a guardrail first (rate quotes, approval promises, guarantees, pressure language, requests for SIN/card/password/one-time codes, and leaked SIN/card numbers; text is Unicode-normalised so zero-width or full-width tricks don't slip through). Then a send-time policy applies (`compliance.py`): STOP suppression list, optional per-channel consent, and optional quiet hours for phone channels. Logs and transcripts redact SIN-, card- and email-like strings.
 
 > Status: working prototype. Everything below marked "tested" is covered by the test suite. Live AWS sending is implemented against the documented API shapes and tested with fake clients; it has not been run against a real AWS account in this repository's CI. See [Limitations](#limitations).
 
@@ -20,7 +20,7 @@ Borrower messages go out through **AWS End User Messaging SMS and RCS**, **AWS E
 git clone https://github.com/ALENZACODES/mortgageloanops && cd mortgageloanops
 python -m mortgageloanops demo        # runs 3 sample files, writes the would-be AWS requests to ./outbox
 python -m mortgageloanops serve 8000  # web UI at http://localhost:8000
-pip install pytest && pytest -q       # 51 tests incl. a 10,000-case property test
+pip install pytest && pytest -q       # 69 tests incl. a 10,000-case property test
 ```
 
 Requires Python 3.10+. No third-party packages are needed for dry-run mode.

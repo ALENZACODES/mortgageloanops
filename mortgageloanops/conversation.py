@@ -63,7 +63,7 @@ class Conversation:
 
     def handle(self, inbound: dict) -> dict:
         num, text, ch = inbound["from"], inbound.get("text", ""), inbound["channel"]
-        self.s.d["transcript"].append({"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "dir": "in", "channel": ch, "from": num, "text": text})
+        self.s.d["transcript"].append({"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "dir": "in", "channel": ch, "from": num, "text": guardrail.redact(text)})
         if STOP.match(text):
             if num not in self.s.d["opted_out"]:
                 self.s.d["opted_out"].append(num)
@@ -73,6 +73,7 @@ class Conversation:
         elif re.match(r"^\s*start\s*$", text, re.I):
             if num in self.s.d["opted_out"]:
                 self.s.d["opted_out"].remove(num)
+            self.m.policy.unsuppress(num)
             reply, action = "You're subscribed again. A licensed broker will be in touch.", "opt_in"
         elif HELP.match(text):
             reply, action = "This is your mortgage broker's assistant. Reply BROKER for a call back or STOP to unsubscribe.", "help"
@@ -86,6 +87,12 @@ class Conversation:
         contact = {"phone": num} if ch in ("sms", "whatsapp") else {"email": num}
         order = (ch,) if ch in ("sms", "whatsapp") else ("email",)
         res = self.m.send_with_fallback(contact, "Re: your message", reply, self.portal, order=order)
-        self.s.d["transcript"].append({"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "dir": "out", "action": action, "delivered_via": res["delivered_via"], "text": reply})
+        if res.get("blocked_by_guardrail"):  # never go silent on a blocked reply: send neutral text instead
+            action += "+guardrail_replaced"
+            reply = guardrail.safe_replacement()
+            res = self.m.send_with_fallback(contact, "Re: your message", reply, self.portal, order=order)
+        if action == "opt_out":
+            self.m.policy.suppress(num)  # applied after the confirmation is sent
+        self.s.d["transcript"].append({"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "dir": "out", "action": action, "delivered_via": res["delivered_via"], "text": guardrail.redact(reply)})
         self.s.save()
         return {"action": action, "sent": res["delivered_via"], "reply": reply}

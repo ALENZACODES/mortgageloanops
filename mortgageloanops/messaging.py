@@ -23,13 +23,16 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutTimeout
 from pathlib import Path
 
 from . import guardrail
+from .compliance import Policy
 
 CHANNELS = ("rcs", "sms", "whatsapp", "email")
 
 
 class Messenger:
     def __init__(self, live: bool | None = None, region: str | None = None, clients: dict | None = None,
-                 timeout: float = 5.0, outbox_dir: str = "outbox", config: dict | None = None):
+                 timeout: float = 5.0, outbox_dir: str = "outbox", config: dict | None = None,
+                 policy: Policy | None = None):
+        self.policy = policy or Policy()
         self.live = (os.environ.get("MLO_LIVE") == "1") if live is None else live
         self.region = region or os.environ.get("AWS_REGION", "ca-central-1")
         self.timeout = timeout
@@ -97,13 +100,21 @@ class Messenger:
 
     # ---- public API ------------------------------------------------------------------------------
     def send_with_fallback(self, contact: dict, subject: str, body: str, portal_url: str,
-                           order: tuple = CHANNELS, simulate_failures: tuple = ()) -> dict:
+                           order: tuple = CHANNELS, simulate_failures: tuple = (), now_utc=None) -> dict:
         g = guardrail.check(subject + "\n" + body)
         if not g["allowed"]:
             self._event("blocked", violations=g["violations"])
             return {"delivered_via": None, "blocked_by_guardrail": g["violations"], "attempts": self.log[-1:]}
+        policy = self.policy
+        if policy.is_suppressed(contact):
+            self._event("suppressed")
+            return {"delivered_via": None, "suppressed": True, "attempts": []}
         attempts = []
         for ch in order:
+            ok, why = policy.channel_allowed(ch, contact, now_utc)
+            if not ok:
+                attempts.append({"channel": ch, "ok": False, "skipped": why})
+                continue
             if ch == "rcs" and (not contact.get("phone") or not self.config.get("rcs_agent_arn")):
                 continue
             if ch == "sms" and not contact.get("phone"):
