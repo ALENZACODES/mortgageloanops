@@ -10,7 +10,9 @@ if os.environ.get("MLO_LIVE") != "1":
     sys.exit("Set MLO_LIVE=1 (and the MLO_* variables) to send real messages.")
 phone, email = sys.argv[1], sys.argv[2]
 m = Messenger(live=True)
-for ch in ("sms", "whatsapp", "email"):
+for ch in ("rcs", "sms", "whatsapp", "email"):
+    if ch == "rcs" and not m.config.get("rcs_agent_arn"):
+        print("rcs SKIPPED (set MLO_RCS_AGENT_ARN)"); continue
     try:
         r = m._send(ch, {"phone": phone, "email": email}, "MortgageLoanOps test", "Test message from MortgageLoanOps. No action needed.")
         print(ch, "OK", r)

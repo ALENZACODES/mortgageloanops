@@ -7,3 +7,5 @@
 5. Run `MLO_LIVE=1 python -m mortgageloanops serve 8000` and POST a sample file to `/api/process`. The response's `borrower_message.attempts` shows which channel delivered.
 
 Region availability differs per service; choose a region where all three are available to you.
+
+6. **RCS (optional)**: create an RCS agent in AWS End User Messaging, complete its testing registration and verify a test device, then set `MLO_RCS_AGENT_ARN` to the agent ARN. RCS uses the same `SendTextMessage` API with the agent ARN as `OriginationIdentity`. The agent must be Active; availability depends on country and carrier.

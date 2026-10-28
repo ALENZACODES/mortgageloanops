@@ -10,7 +10,7 @@ Canadian mortgage operations on AWS in one small, dependency-free Python app. It
 
 **Also included:** a Bedrock Q&A agent that must call the real calculators for every number (`agent.py`, Amazon Bedrock Converse tool use; not the AgentCore runtime), two-way messaging that handles inbound SMS/WhatsApp replies with STOP/START/HELP/BROKER handling (`conversation.py`), and Lambda handlers plus a SAM template (`lambda_handler.py`, `infra/template.yaml`).
 
-Borrower messages go out through **AWS End User Messaging SMS**, **AWS End User Messaging Social (WhatsApp)** and **Amazon SES**, with a 5-second per-channel timeout and a secure-portal fallback. Every message passes a guardrail first: no rate quotes, no approval promises, no guarantees.
+Borrower messages go out through **AWS End User Messaging SMS and RCS**, **AWS End User Messaging Social (WhatsApp)** and **Amazon SES**, with a 5-second per-channel timeout and a secure-portal fallback. Channel order: **RCS** (when `MLO_RCS_AGENT_ARN` is set) → SMS → WhatsApp → email → portal. Every message passes a guardrail first: no rate quotes, no approval promises, no guarantees.
 
 > Status: working prototype. Everything below marked "tested" is covered by the test suite. Live AWS sending is implemented against the documented API shapes and tested with fake clients; it has not been run against a real AWS account in this repository's CI. See [Limitations](#limitations).
 
@@ -20,7 +20,7 @@ Borrower messages go out through **AWS End User Messaging SMS**, **AWS End User 
 git clone https://github.com/ALENZACODES/mortgageloanops && cd mortgageloanops
 python -m mortgageloanops demo        # runs 3 sample files, writes the would-be AWS requests to ./outbox
 python -m mortgageloanops serve 8000  # web UI at http://localhost:8000
-pip install pytest && pytest -q       # 46 tests incl. a 10,000-case property test
+pip install pytest && pytest -q       # 51 tests incl. a 10,000-case property test
 ```
 
 Requires Python 3.10+. No third-party packages are needed for dry-run mode.
@@ -31,6 +31,7 @@ Requires Python 3.10+. No third-party packages are needed for dry-run mode.
 pip install boto3
 export MLO_LIVE=1 AWS_REGION=ca-central-1
 export MLO_SMS_ORIGINATION=+1XXXXXXXXXX                 # registered origination number / pool ID
+export MLO_RCS_AGENT_ARN=arn:aws:sms-voice:...:rcs-agent/rcs-...   # optional: enables the RCS channel (agent must be Active)
 export MLO_WHATSAPP_PHONE_NUMBER_ID=phone-number-id-... # from AWS End User Messaging Social
 export MLO_EMAIL_FROM=ops@your-verified-domain.com      # verified SES identity
 python -m mortgageloanops serve 8000

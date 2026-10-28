@@ -4,6 +4,7 @@ Description: MortgageLoanOps API + inbound two-way messaging handler (SAM)
 Parameters:
   SmsOrigination: {Type: String, Description: Origination number or pool ID (End User Messaging SMS)}
   WhatsAppPhoneNumberId: {Type: String, Default: "", Description: phone-number-id-... from End User Messaging Social}
+  RcsAgentArn: {Type: String, Default: "", Description: Optional AWS RCS agent ARN (enables the RCS channel)}
   EmailFrom: {Type: String, Description: Verified SES sender}
   BedrockModelId: {Type: String, Default: "", Description: Optional Bedrock model ID for the Q&A agent}
 Globals:
@@ -16,6 +17,7 @@ Globals:
         MLO_LIVE: "1"
         MLO_SMS_ORIGINATION: !Ref SmsOrigination
         MLO_WHATSAPP_PHONE_NUMBER_ID: !Ref WhatsAppPhoneNumberId
+        MLO_RCS_AGENT_ARN: !Ref RcsAgentArn
         MLO_EMAIL_FROM: !Ref EmailFrom
         MLO_BEDROCK_MODEL_ID: !Ref BedrockModelId
 Resources:

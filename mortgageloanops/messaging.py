@@ -1,12 +1,14 @@
 """Borrower messaging on AWS End User Messaging (SMS), AWS End User Messaging Social (WhatsApp) and SES.
 
 Channel order with a hard per-channel timeout (default 5s), then a secure-portal fallback:
-    SMS -> WhatsApp -> Email (SES) -> portal link
+    RCS -> SMS -> WhatsApp -> Email (SES) -> portal link
+RCS is only attempted when MLO_RCS_AGENT_ARN is set (an AWS RCS agent must exist and be Active).
 
 * DRY-RUN (default): nothing is sent; each message is written to an outbox as JSON in the exact shape
   that would be passed to the AWS API.
 * LIVE (MLO_LIVE=1 or live=True): uses boto3 clients
-    - 'pinpoint-sms-voice-v2'  .send_text_message        (AWS End User Messaging SMS)
+    - 'pinpoint-sms-voice-v2'  .send_text_message        (AWS End User Messaging SMS and RCS: the same API;
+                                                          an RCS agent ARN as OriginationIdentity sends via RCS only)
     - 'socialmessaging'        .send_whatsapp_message    (AWS End User Messaging Social)
     - 'sesv2'                  .send_email               (Amazon SES)
   Clients can be injected for testing. Every message passes the guardrail before any channel is tried.
@@ -22,7 +24,7 @@ from pathlib import Path
 
 from . import guardrail
 
-CHANNELS = ("sms", "whatsapp", "email")
+CHANNELS = ("rcs", "sms", "whatsapp", "email")
 
 
 class Messenger:
@@ -35,6 +37,7 @@ class Messenger:
         self.clients = clients or {}
         self.config = config or {
             "sms_origination": os.environ.get("MLO_SMS_ORIGINATION", ""),
+            "rcs_agent_arn": os.environ.get("MLO_RCS_AGENT_ARN", ""),
             "whatsapp_phone_number_id": os.environ.get("MLO_WHATSAPP_PHONE_NUMBER_ID", ""),
             "meta_api_version": os.environ.get("MLO_META_API_VERSION", "v20.0"),
             "email_from": os.environ.get("MLO_EMAIL_FROM", ""),
@@ -53,6 +56,10 @@ class Messenger:
         return {"DestinationPhoneNumber": to, "OriginationIdentity": self.config["sms_origination"],
                 "MessageBody": body, "MessageType": "TRANSACTIONAL"}
 
+    def build_rcs(self, to: str, body: str) -> dict:
+        # Documented direct-send shape: an AWS RCS agent ARN as the origination identity delivers via RCS only.
+        return {"DestinationPhoneNumber": to, "OriginationIdentity": self.config.get("rcs_agent_arn", ""), "MessageBody": body}
+
     def build_whatsapp(self, to: str, body: str) -> dict:
         msg = {"messaging_product": "whatsapp", "to": to, "type": "text", "text": {"body": body}}
         return {"originationPhoneNumberId": self.config["whatsapp_phone_number_id"],
@@ -64,7 +71,10 @@ class Messenger:
 
     # ---- single-channel sends --------------------------------------------------------------------
     def _send(self, channel: str, contact: dict, subject: str, body: str) -> dict:
-        if channel == "sms":
+        if channel == "rcs":
+            req = self.build_rcs(contact["phone"], body)
+            fn = lambda: self._client("pinpoint-sms-voice-v2").send_text_message(**req)
+        elif channel == "sms":
             req = self.build_sms(contact["phone"], body)
             fn = lambda: self._client("pinpoint-sms-voice-v2").send_text_message(**req)
         elif channel == "whatsapp":
@@ -94,6 +104,8 @@ class Messenger:
             return {"delivered_via": None, "blocked_by_guardrail": g["violations"], "attempts": self.log[-1:]}
         attempts = []
         for ch in order:
+            if ch == "rcs" and (not contact.get("phone") or not self.config.get("rcs_agent_arn")):
+                continue
             if ch == "sms" and not contact.get("phone"):
                 continue
             if ch == "whatsapp" and not contact.get("phone"):

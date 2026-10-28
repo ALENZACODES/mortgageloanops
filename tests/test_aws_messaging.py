@@ -81,3 +81,48 @@ def test_dry_run_writes_outbox_and_needs_no_aws(tmp_path):
     r = m.send_with_fallback(CONTACT, "s", "hello", "https://p")
     assert r["delivered_via"] == "sms" and r["result"]["mode"] == "dry-run"
     assert len(list(tmp_path.glob("sms-*.json"))) == 1
+
+
+RCS_CFG = dict(CFG, rcs_agent_arn="arn:aws:sms-voice:us-east-1:123456789012:rcs-agent/rcs-a1b2c3d4")
+
+
+def mk_rcs(sms=None, **kw):
+    clients = {"pinpoint-sms-voice-v2": sms or FakeSMS(), "socialmessaging": FakeWA(), "sesv2": FakeSES()}
+    return Messenger(live=True, clients=clients, config=RCS_CFG, **kw), clients
+
+
+def test_rcs_goes_first_with_documented_request_shape():
+    m, c = mk_rcs()
+    r = m.send_with_fallback(CONTACT, "s", "hello", "https://p")
+    assert r["delivered_via"] == "rcs" and r["attempts"][0]["channel"] == "rcs"
+    assert c["pinpoint-sms-voice-v2"].calls[0] == {"DestinationPhoneNumber": "+14165550100", "OriginationIdentity": RCS_CFG["rcs_agent_arn"], "MessageBody": "hello"}
+
+
+def test_rcs_failure_falls_back_to_sms_then_whatsapp():
+    class RcsDown(FakeSMS):
+        def send_text_message(self, **kw):
+            self.calls.append(kw)
+            if kw["OriginationIdentity"].startswith("arn:"): raise RuntimeError("RCS agent not active")
+            return {"MessageId": "sms-ok"}
+    m, c = mk_rcs(sms=RcsDown())
+    r = m.send_with_fallback(CONTACT, "s", "hello", "https://p")
+    assert [a["channel"] for a in r["attempts"]] == ["rcs", "sms"] and r["delivered_via"] == "sms"
+    assert c["pinpoint-sms-voice-v2"].calls[1]["OriginationIdentity"] == "+15551230000"
+
+
+def test_rcs_skipped_when_no_agent_configured():
+    m, c = mk()          # CFG has no rcs_agent_arn
+    r = m.send_with_fallback(CONTACT, "s", "hello", "https://p")
+    assert r["attempts"][0]["channel"] == "sms"
+
+
+def test_rcs_message_is_guardrailed_too():
+    m, c = mk_rcs()
+    r = m.send_with_fallback(CONTACT, "s", "Rates from 3.99% today", "https://p")
+    assert r["delivered_via"] is None and not c["pinpoint-sms-voice-v2"].calls
+
+
+def test_dry_run_rcs_writes_outbox(tmp_path):
+    m = Messenger(live=False, outbox_dir=str(tmp_path), config=RCS_CFG)
+    r = m.send_with_fallback(CONTACT, "s", "hello", "https://p")
+    assert r["delivered_via"] == "rcs" and len(list(tmp_path.glob("rcs-*.json"))) == 1
